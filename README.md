@@ -20,7 +20,7 @@ Próximas partes: área da coordenação (criar e editar tarefas, ver quem já m
 
 ## Requisitos
 
-- PHP 8.3 ou mais novo, com as extensões `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`
+- PHP 8.3 ou mais novo (recomendado: 8.4), com as extensões `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`
 - [Composer](https://getcomposer.org)
 - MySQL 8 (ou MariaDB 10.3+)
 
@@ -65,7 +65,47 @@ php artisan serve
 
 Se você deixar `ESCOLA_CODIGO` vazio, um código é sorteado e aparece na tela no passo 3.
 
-## Colocar na internet (Hostinger)
+## Colocar na internet: VPS da Hostinger com CloudPanel
+
+Versões: **Laravel 13** e **PHP 8.4** (o mínimo é PHP 8.3).
+
+### 1. Domínio
+
+Na zona de DNS do domínio, crie (ou confira) um registro **A** para `@` e outro para `www`,
+os dois apontando para o IP da VPS.
+
+### 2. No CloudPanel (`https://IP-DA-VPS:8443`)
+
+1. **Site:** *Sites → + Add Site → Create a PHP Site*.
+   - *Application:* **Laravel 13** (se não aparecer, escolha o Laravel mais novo da lista; isso só configura o servidor para abrir a pasta `public`).
+   - *PHP Version:* **8.4**.
+   - *Domain Name:* o seu domínio, sem `www` (ex.: `appmordomia.com.br`).
+   - *Site User* e *Site User Password:* um usuário (ex.: `pauta`) e uma senha forte. É com eles que você entra no terminal.
+2. **Banco de dados:** dentro do site, aba *Databases → Add Database*. Anote o nome do banco, o usuário e a senha.
+3. **HTTPS:** dentro do site, aba *SSL/TLS → Actions → New Let's Encrypt Certificate*. Só funciona depois que o domínio já aponta para a VPS.
+
+### 3. No terminal
+
+```bash
+ssh pauta@IP-DA-VPS                     # o Site User criado no CloudPanel
+
+cd ~/htdocs
+rm -rf appmordomia.com.br               # pasta vazia criada pelo CloudPanel
+git clone https://github.com/barcelosanderson/pautacp.git appmordomia.com.br
+cd appmordomia.com.br
+
+PHP_BIN=php8.4 bash publicar.sh instalar   # instala as dependências, cria o .env e para
+nano .env                                  # preencha (veja abaixo)
+PHP_BIN=php8.4 bash publicar.sh instalar   # cria as tabelas e a pauta
+php8.4 artisan pauta:coordenador "Seu Nome" "Sobrenome"
+```
+
+No `.env`, altere as mesmas linhas da seção da hospedagem compartilhada (abaixo), com `DB_HOST=127.0.0.1`
+e o banco, o usuário e a senha criados no CloudPanel.
+
+Para atualizar depois: `cd ~/htdocs/appmordomia.com.br && PHP_BIN=php8.4 bash publicar.sh`
+
+## Colocar na internet: hospedagem compartilhada da Hostinger
 
 Precisa de um plano com acesso SSH (Premium, Business ou Cloud). O plano Single não tem SSH.
 

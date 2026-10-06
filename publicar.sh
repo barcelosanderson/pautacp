@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# Instala ou atualiza o site na hospedagem (feito para a Hostinger, via SSH).
+# Instala ou atualiza o site no servidor (Hostinger: hospedagem ou VPS com CloudPanel).
 #
 #   Primeira vez:  bash publicar.sh instalar
 #   Atualizar:     bash publicar.sh
+#
+# Para forçar uma versão do PHP:  PHP_BIN=php8.4 bash publicar.sh
 #
 # Tudo fica dentro de funções e só roda na última linha, para o script
 # não se confundir quando o "git pull" trocar este próprio arquivo.
@@ -13,11 +15,13 @@ set -euo pipefail
 passo() { printf '\n==> %s\n' "$1"; }
 parar() { printf '\n%s\n\n' "$1" >&2; exit 1; }
 
-# Na Hostinger, o "php" do terminal pode ser mais antigo que o escolhido no hPanel.
-# Procura um PHP 8.3 ou mais novo, inclusive nas versões instaladas em /opt/alt.
+# O "php" do terminal pode ser diferente do PHP do site.
+# Procura um PHP 8.3 ou mais novo: PHP_BIN, depois "php", depois php8.x (VPS com
+# CloudPanel) e as versões em /opt/alt (hospedagem compartilhada da Hostinger).
 escolher_php() {
   local candidato
-  for candidato in php /opt/alt/php85/usr/bin/php /opt/alt/php84/usr/bin/php /opt/alt/php83/usr/bin/php; do
+  for candidato in ${PHP_BIN:-} php php8.5 php8.4 php8.3 \
+    /opt/alt/php85/usr/bin/php /opt/alt/php84/usr/bin/php /opt/alt/php83/usr/bin/php; do
     if command -v "$candidato" >/dev/null 2>&1 \
       && "$candidato" -r 'exit(version_compare(PHP_VERSION, "8.3.0", ">=") ? 0 : 1);' 2>/dev/null; then
       command -v "$candidato"
@@ -29,11 +33,22 @@ escolher_php() {
 
 escolher_composer() {
   if command -v composer2 >/dev/null 2>&1; then
-    echo composer2
+    command -v composer2
   elif command -v composer >/dev/null 2>&1; then
-    echo composer
+    command -v composer
   else
     return 1
+  fi
+}
+
+# Roda com o PHP escolhido, e não com o "php" padrão do terminal.
+artisan() { "$PHP" artisan "$@"; }
+
+composer_rodar() {
+  if head -n 1 "$COMPOSER" | grep -q php; then
+    "$PHP" "$COMPOSER" "$@"
+  else
+    "$COMPOSER" "$@"
   fi
 }
 
@@ -46,12 +61,10 @@ main() {
 
   cd "$(dirname "$0")"
 
-  local php_bin composer
-  php_bin="$(escolher_php)" \
-    || parar "Não encontrei PHP 8.3 ou mais novo. No hPanel, abra Configuração do PHP e escolha 8.3 ou mais novo."
-  export PATH="$(dirname "$php_bin"):$PATH"
-  composer="$(escolher_composer)" || parar "Não encontrei o Composer nesta hospedagem."
-  passo "Usando PHP $(php -r 'echo PHP_VERSION;') e $composer"
+  PHP="$(escolher_php)" \
+    || parar "Não encontrei PHP 8.3 ou mais novo. Escolha PHP 8.3 ou mais novo no painel da hospedagem."
+  COMPOSER="$(escolher_composer)" || parar "Não encontrei o Composer neste servidor."
+  passo "Usando PHP $("$PHP" -r 'echo PHP_VERSION;') ($PHP) e $COMPOSER"
 
   if [ "$modo" = "atualizar" ]; then
     passo "Baixando a versão mais nova do GitHub"
@@ -59,7 +72,7 @@ main() {
   fi
 
   passo "Instalando as dependências (pode levar alguns minutos)"
-  "$composer" install --no-dev --optimize-autoloader --no-interaction
+  composer_rodar install --no-dev --optimize-autoloader --no-interaction
 
   if [ ! -f .env ]; then
     cp .env.example .env
@@ -70,18 +83,18 @@ Depois rode de novo: bash publicar.sh $modo"
 
   if ! grep -q '^APP_KEY=base64:' .env; then
     passo "Gerando a chave de segurança do site"
-    php artisan key:generate --force
+    artisan key:generate --force
   fi
 
   passo "Atualizando o banco de dados"
   if [ "$modo" = "instalar" ]; then
-    php artisan migrate --seed --force
+    artisan migrate --seed --force
   else
-    php artisan migrate --force
+    artisan migrate --force
   fi
 
   passo "Preparando o site para ficar mais rápido"
-  php artisan optimize
+  artisan optimize
 
   passo "Pronto."
 }
