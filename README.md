@@ -65,13 +65,73 @@ php artisan serve
 
 Se você deixar `ESCOLA_CODIGO` vazio, um código é sorteado e aparece na tela no passo 3.
 
-## Colocar na internet (hospedagem com PHP e MySQL)
+## Colocar na internet (Hostinger)
 
-1. Envie os arquivos do projeto para a hospedagem (por Git ou FTP) e rode `composer install --no-dev --optimize-autoloader`.
-2. Aponte o domínio para a pasta **`public`** do projeto (nunca para a pasta raiz).
-3. Crie o `.env` como acima, com `APP_ENV=production`, `APP_DEBUG=false` e o endereço do site em `APP_URL`.
-4. Rode `php artisan migrate --seed --force` e `php artisan pauta:coordenador "Nome" "Sobrenome"`.
-5. Rode `php artisan config:cache` e `php artisan route:cache` para o site ficar mais rápido.
+Precisa de um plano com acesso SSH (Premium, Business ou Cloud). O plano Single não tem SSH.
+
+### 1. No hPanel
+
+1. **PHP:** no painel do site, em *Configuração do PHP*, escolha **8.3 ou mais novo**.
+2. **Banco de dados:** em *Bancos de dados MySQL*, crie um banco. Anote o nome do banco, o usuário e a senha (os dois primeiros começam com `u123456789_`).
+3. **SSH:** em *Avançado → Acesso SSH*, ative o acesso e anote o IP, a porta e o usuário.
+4. **HTTPS:** em *Segurança → SSL*, instale o certificado gratuito e ative *Forçar HTTPS*.
+
+### 2. No terminal (SSH)
+
+```bash
+ssh -p PORTA USUARIO@IP
+
+# Se "php -v" mostrar uma versão menor que 8.3, rode uma vez:
+echo 'export PATH=/opt/alt/php83/usr/bin:$PATH' >> ~/.bashrc && source ~/.bashrc
+
+cd ~/domains/SEU-DOMINIO.com.br
+git clone https://github.com/barcelosanderson/pautacp.git
+cd pautacp
+bash publicar.sh instalar      # instala as dependências, cria o .env e para
+nano .env                      # preencha (veja abaixo) e salve com Ctrl+O, Enter, Ctrl+X
+bash publicar.sh instalar      # cria as tabelas e a pauta
+php artisan pauta:coordenador "Seu Nome" "Sobrenome"
+
+# Faz o domínio abrir a pasta public do projeto
+cd ..
+mv public_html public_html_antigo
+ln -s pautacp/public public_html
+```
+
+No `.env`, altere estas linhas:
+
+```ini
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://SEU-DOMINIO.com.br
+LOG_LEVEL=error
+
+DB_HOST=localhost
+DB_DATABASE=u123456789_pauta
+DB_USERNAME=u123456789_pauta
+DB_PASSWORD="a senha do banco"
+
+ESCOLA_NOME="Nome da escola"
+ESCOLA_CODIGO=ABC123
+```
+
+E acrescente no fim do arquivo: `SESSION_SECURE_COOKIE=true`
+
+### 3. Atualizar o site depois
+
+Sempre que houver mudanças no GitHub:
+
+```bash
+cd ~/domains/SEU-DOMINIO.com.br/pautacp
+bash publicar.sh
+```
+
+### Se der erro
+
+- **Erro 500:** veja o motivo com `tail -n 40 storage/logs/laravel.log`.
+- **Aparece a página padrão da Hostinger:** o atalho `public_html` não foi criado. Confira com `ls -la ~/domains/SEU-DOMINIO.com.br`.
+- **"Access denied" no banco:** confira nome do banco, usuário e senha no `.env` e rode `php artisan config:clear`.
+- Mudou alguma coisa no `.env`? Rode `php artisan optimize` para o site ler de novo.
 
 ## Testes
 
@@ -94,6 +154,7 @@ Os testes usam um banco SQLite na memória, então não mexem no seu MySQL.
 | Telas | `resources/views` |
 | Visual (cores, botões, campos…) | `public/css/pauta.css` |
 | Avisos, menu e marcar sem recarregar | `public/js/pauta.js` |
+| Instalar e atualizar na hospedagem | `publicar.sh` |
 
 ## Banco de dados
 
