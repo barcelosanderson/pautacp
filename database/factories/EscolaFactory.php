@@ -16,6 +16,7 @@ class EscolaFactory extends Factory
         return [
             'nome' => 'Escola '.fake()->lastName(),
             'codigo' => Str::upper(Str::random(6)),
+            'codigo_coordenacao' => Str::upper(Str::random(8)),
         ];
     }
 }

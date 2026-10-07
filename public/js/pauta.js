@@ -3,6 +3,7 @@
  * - avisos rápidos que somem em 4 segundos
  * - menu de 3 riscos em telas menores que 900px
  * - marcar e desmarcar tarefas sem recarregar a página
+ * - pop-up de confirmação antes de excluir
  */
 (function () {
   'use strict';
@@ -58,6 +59,26 @@
       var aberto = menu.classList.toggle('aberto');
       abrir.setAttribute('aria-expanded', aberto ? 'true' : 'false');
       rotulo.textContent = aberto ? 'Fechar' : 'Menu';
+    });
+  }
+
+  /* ---------- Pop-up de confirmação (excluir) ---------- */
+
+  var popup = document.getElementById('popup-excluir');
+  if (popup && typeof popup.showModal === 'function') {
+    var formularioPopup = popup.querySelector('[data-popup-formulario]');
+    var nomePopup = popup.querySelector('[data-popup-nome]');
+
+    document.querySelectorAll('[data-excluir]').forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        formularioPopup.setAttribute('action', botao.getAttribute('data-url'));
+        nomePopup.textContent = '“' + botao.getAttribute('data-nome') + '”';
+        popup.showModal();
+      });
+    });
+
+    popup.querySelector('[data-popup-fechar]').addEventListener('click', function () {
+      popup.close();
     });
   }
 

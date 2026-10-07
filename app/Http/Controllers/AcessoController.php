@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
- * Criar conta e entrar usando só nome, sobrenome e o código da escola.
+ * Criar conta e entrar usando só nome, sobrenome e um código:
+ * - o código dos professores abre conta de professor;
+ * - o código da coordenação abre conta da coordenação (que pode editar a pauta).
  * Depois de entrar, o aparelho fica lembrado: a pessoa não precisa entrar de novo.
  */
 class AcessoController extends Controller
@@ -29,7 +31,7 @@ class AcessoController extends Controller
     {
         $dados = $this->validar($request);
 
-        $escola = Escola::porCodigo($dados['codigo']);
+        [$escola, $papel] = Escola::acessoPorCodigo($dados['codigo']) ?? [null, null];
         if (! $escola) {
             return $this->codigoNaoEncontrado();
         }
@@ -43,7 +45,7 @@ class AcessoController extends Controller
             $usuario = $escola->usuarios()->create([
                 'nome' => $dados['nome'],
                 'sobrenome' => $dados['sobrenome'],
-                'papel' => User::PAPEL_PROFESSOR,
+                'papel' => $papel,
             ]);
         } catch (UniqueConstraintViolationException) {
             return back()->withInput()->withErrors(['nome' => self::NOME_REPETIDO]);
@@ -52,15 +54,16 @@ class AcessoController extends Controller
         Auth::login($usuario, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->route('pauta')
-            ->with('sucesso', 'Conta criada com sucesso. Seja bem-vindo(a), '.$usuario->nome.'.');
+        return redirect()->to($this->inicioDe($usuario))->with('sucesso', $usuario->ehCoordenador()
+            ? 'Conta da coordenação criada. Seja bem-vindo(a), '.$usuario->nome.'.'
+            : 'Conta criada com sucesso. Seja bem-vindo(a), '.$usuario->nome.'.');
     }
 
     public function entrar(Request $request): RedirectResponse
     {
         $dados = $this->validar($request);
 
-        $escola = Escola::porCodigo($dados['codigo']);
+        [$escola, $papel] = Escola::acessoPorCodigo($dados['codigo']) ?? [null, null];
         if (! $escola) {
             return $this->codigoNaoEncontrado();
         }
@@ -75,10 +78,22 @@ class AcessoController extends Controller
             ]);
         }
 
+        // Conta da coordenação não entra com o código dos professores.
+        if ($usuario->ehCoordenador() && $papel === User::PAPEL_PROFESSOR) {
+            return back()->withInput()->withErrors([
+                'codigo' => 'Esta conta é da coordenação. Para entrar, use o código da coordenação.',
+            ]);
+        }
+
+        // Quem entra com o código da coordenação passa a ser da coordenação.
+        if ($papel === User::PAPEL_COORDENADOR && ! $usuario->ehCoordenador()) {
+            $usuario->update(['papel' => User::PAPEL_COORDENADOR]);
+        }
+
         Auth::login($usuario, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('pauta'))
+        return redirect()->intended($this->inicioDe($usuario))
             ->with('sucesso', 'Que bom ver você de novo, '.$usuario->nome.'.');
     }
 
@@ -90,6 +105,12 @@ class AcessoController extends Controller
 
         return redirect()->route('login', ['modo' => 'entrar'])
             ->with('sucesso', 'Você saiu da sua conta.');
+    }
+
+    /** A coordenação começa na tela de editar a pauta; o professor, na pauta dele. */
+    private function inicioDe(User $usuario): string
+    {
+        return $usuario->ehCoordenador() ? route('coordenacao.tarefas.index') : route('pauta');
     }
 
     /**
@@ -107,14 +128,14 @@ class AcessoController extends Controller
             'codigo.required' => 'Escreva o código da escola.',
             'nome.max' => 'O nome pode ter no máximo 60 letras.',
             'sobrenome.max' => 'O sobrenome pode ter no máximo 80 letras.',
-            'codigo.max' => 'Esse código está grande demais. Confira com a coordenação.',
+            'codigo.max' => 'Esse código está grande demais. Confira o código ou fale com o cara.',
         ]);
     }
 
     private function codigoNaoEncontrado(): RedirectResponse
     {
         return back()->withInput()->withErrors([
-            'codigo' => 'Não encontramos uma escola com esse código. Confira com a coordenação.',
+            'codigo' => 'Não encontramos uma escola com esse código. Confira o código ou fale com o cara.',
         ]);
     }
 }

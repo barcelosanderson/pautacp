@@ -149,18 +149,36 @@ class PautaTest extends TestCase
     public function test_pauta_vazia_explica_o_que_acontece(): void
     {
         $this->actingAs($this->usuario)->get('/')
-            ->assertSee('Nenhuma tarefa criada ainda.');
+            ->assertSee('Nenhuma tarefa criada ainda.')
+            ->assertSee('Fale com o cara.');
+    }
+
+    public function test_seeder_sorteia_codigo_da_coordenacao_diferente_quando_o_do_env_repete(): void
+    {
+        config(['pauta.escola.codigo' => 'MESMO1', 'pauta.escola.codigo_coordenacao' => 'mesmo1']);
+
+        $this->seed(PautaSeeder::class);
+
+        $escola = Escola::porCodigo('MESMO1');
+        $this->assertNotSame('MESMO1', $escola->codigo_coordenacao);
+        $this->assertSame(8, strlen($escola->codigo_coordenacao));
     }
 
     public function test_seeder_cria_a_escola_e_a_pauta_completa_sem_duplicar(): void
     {
-        config(['pauta.escola.codigo' => 'abc123', 'pauta.escola.nome' => 'Colégio Teste']);
+        config([
+            'pauta.escola.codigo' => 'abc123',
+            'pauta.escola.codigo_coordenacao' => 'coord99',
+            'pauta.escola.nome' => 'Colégio Teste',
+        ]);
 
         $this->seed(PautaSeeder::class);
         $this->seed(PautaSeeder::class);
 
         $escola = Escola::porCodigo('ABC123');
         $this->assertNotNull($escola);
+        $this->assertSame('COORD99', $escola->codigo_coordenacao);
+        $this->assertSame(1, Escola::where('codigo', 'ABC123')->count());
         $this->assertSame(34, $escola->tarefas()->count());
         $this->assertSame(33, $escola->tarefas()->where('checavel', true)->count());
 

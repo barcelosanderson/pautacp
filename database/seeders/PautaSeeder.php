@@ -64,16 +64,16 @@ class PautaSeeder extends Seeder
 
     public function run(): void
     {
-        $codigo = Escola::normalizarCodigo((string) (config('pauta.escola.codigo') ?: $this->sortearCodigo()));
+        $codigo = Escola::normalizarCodigo((string) (config('pauta.escola.codigo') ?: Escola::sortearCodigo()));
 
         $escola = Escola::firstOrCreate(
             ['codigo' => $codigo],
-            ['nome' => config('pauta.escola.nome')],
+            ['nome' => config('pauta.escola.nome'), 'codigo_coordenacao' => $this->codigoDaCoordenacao($codigo)],
         );
 
         if ($escola->tarefas()->exists()) {
             $this->command?->info("A escola {$escola->nome} já tem tarefas. Nada foi alterado.");
-            $this->command?->info("Código da escola: {$escola->codigo}");
+            $this->mostrarCodigos($escola);
 
             return;
         }
@@ -102,7 +102,29 @@ class PautaSeeder extends Seeder
         }
 
         $this->command?->info('Pauta criada com '.count(self::TAREFAS)." itens para a escola {$escola->nome}.");
-        $this->command?->info("Código da escola: {$escola->codigo}");
+        $this->mostrarCodigos($escola);
+    }
+
+    /** Código da coordenação do .env, se for válido; senão um sorteado (mais longo que o dos professores). */
+    private function codigoDaCoordenacao(string $codigoProfessores): string
+    {
+        $doEnv = Escola::normalizarCodigo((string) config('pauta.escola.codigo_coordenacao'));
+
+        if ($doEnv !== '' && $doEnv !== $codigoProfessores && ! Escola::codigoEmUso($doEnv)) {
+            return $doEnv;
+        }
+
+        if ($doEnv !== '') {
+            $this->command?->warn('ESCOLA_CODIGO_COORDENACAO é igual ao código dos professores ou já está em uso. Um código novo foi sorteado.');
+        }
+
+        return Escola::sortearCodigo(8);
+    }
+
+    private function mostrarCodigos(Escola $escola): void
+    {
+        $this->command?->info("Código dos professores: {$escola->codigo}");
+        $this->command?->info("Código da coordenação: {$escola->codigo_coordenacao}");
     }
 
     private function data(int $ano, string $mesDia): Carbon
@@ -110,17 +132,5 @@ class PautaSeeder extends Seeder
         [$mes, $dia] = array_map('intval', explode('-', $mesDia));
 
         return Carbon::create($ano, $mes, $dia)->startOfDay();
-    }
-
-    /** Código de 6 caracteres, sem letras e números que se confundem (O e 0, I e 1). */
-    private function sortearCodigo(): string
-    {
-        $caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        $codigo = '';
-        for ($i = 0; $i < 6; $i++) {
-            $codigo .= $caracteres[random_int(0, strlen($caracteres) - 1)];
-        }
-
-        return $codigo;
     }
 }

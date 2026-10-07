@@ -21,6 +21,12 @@ class Pauta
 
     private ?Collection $itens = null;
 
+    /** "2026-10" vira "Outubro". */
+    public static function nomeDoMes(string $chave): string
+    {
+        return self::MESES[(int) substr($chave, 5, 2)];
+    }
+
     public function __construct(
         private readonly User $usuario,
         private readonly CarbonInterface $hoje,
@@ -64,7 +70,7 @@ class Pauta
             ->groupBy(fn (object $item) => $item->tarefa->inicio->format('Y-m'))
             ->map(fn (Collection $itens, string $chave) => (object) [
                 'chave' => $chave,
-                'nome' => self::MESES[(int) substr($chave, 5, 2)],
+                'nome' => self::nomeDoMes($chave),
                 'itens' => $itens,
                 'total' => $itens->filter(fn (object $item) => $item->tarefa->checavel)->count(),
                 'feitas' => $itens->where('feita', true)->count(),

@@ -33,7 +33,7 @@
         @if ($vazia)
             <section class="card vazio">
                 <h2 class="titulo-card">Nenhuma tarefa criada ainda.</h2>
-                <p class="texto">Quando a coordenação publicar a pauta, as tarefas aparecem aqui.</p>
+                <p class="texto">Quando a pauta for publicada, as tarefas aparecem aqui. Dúvidas? Fale com o cara.</p>
             </section>
         @else
             <nav class="filtros" aria-label="Escolha o mês">

@@ -15,7 +15,7 @@ class DefinirCoordenador extends Command
     protected $signature = 'pauta:coordenador
         {nome : Primeiro nome}
         {sobrenome : Sobrenome}
-        {--codigo= : Código da escola (só é preciso se houver mais de uma escola)}';
+        {--codigo= : Um dos códigos da escola (só é preciso se houver mais de uma escola)}';
 
     protected $description = 'Cria ou promove uma pessoa a coordenador(a) da escola';
 
@@ -47,7 +47,7 @@ class DefinirCoordenador extends Command
         $codigo = $this->option('codigo');
 
         if ($codigo) {
-            $escola = Escola::porCodigo($codigo);
+            $escola = Escola::acessoPorCodigo($codigo)[0] ?? null;
             if (! $escola) {
                 $this->error("Nenhuma escola com o código {$codigo}.");
             }

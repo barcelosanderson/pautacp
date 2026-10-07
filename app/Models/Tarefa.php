@@ -44,6 +44,31 @@ class Tarefa extends Model
     }
 
     /**
+     * Texto da data montado a partir do primeiro e do último dia:
+     * "06/10", "06 e 07/10", "06 a 09/10" ou "21/12 a 17/01".
+     */
+    public static function rotuloDasDatas(CarbonInterface $inicio, CarbonInterface $prazo): string
+    {
+        if ($inicio->isSameDay($prazo)) {
+            return $inicio->format('d/m');
+        }
+
+        if ($inicio->format('Y-m') === $prazo->format('Y-m')) {
+            $ligacao = $inicio->copy()->addDay()->isSameDay($prazo) ? ' e ' : ' a ';
+
+            return $inicio->format('d').$ligacao.$prazo->format('d/m');
+        }
+
+        return $inicio->format('d/m').' a '.$prazo->format('d/m');
+    }
+
+    /** O texto da data só quando foi escrito à mão (ex.: "Até 06/10"); vazio se é o automático. */
+    public function quandoPersonalizado(): string
+    {
+        return $this->quando === static::rotuloDasDatas($this->inicio, $this->prazo) ? '' : $this->quando;
+    }
+
+    /**
      * Status mostrado na linha da pauta.
      * "chave" vira a classe de cor (status-feito, status-logo...), "rotulo" é o texto.
      *

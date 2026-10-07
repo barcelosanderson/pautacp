@@ -17,7 +17,7 @@ class AcessoTest extends TestCase
     {
         parent::setUp();
 
-        $this->escola = Escola::factory()->create(['codigo' => 'CP2026']);
+        $this->escola = Escola::factory()->create(['codigo' => 'CP2026', 'codigo_coordenacao' => 'COORD2026']);
     }
 
     public function test_a_tela_de_entrada_abre(): void
@@ -129,6 +129,56 @@ class AcessoTest extends TestCase
         ])->assertSessionHasErrors('nome');
 
         $this->assertGuest();
+    }
+
+    public function test_codigo_da_coordenacao_cria_conta_da_coordenacao(): void
+    {
+        $this->post('/criar-conta', [
+            'nome' => 'Ana',
+            'sobrenome' => 'Coordenadora',
+            'codigo' => 'coord2026',
+        ])->assertRedirect(route('coordenacao.tarefas.index'));
+
+        $this->assertTrue(User::sole()->ehCoordenador());
+    }
+
+    public function test_conta_da_coordenacao_nao_entra_com_o_codigo_dos_professores(): void
+    {
+        User::factory()->for($this->escola)->coordenador()->create(['nome' => 'Ana', 'sobrenome' => 'Coordenadora']);
+
+        $this->from('/entrar?modo=entrar')->post('/entrar', [
+            'nome' => 'Ana',
+            'sobrenome' => 'Coordenadora',
+            'codigo' => 'CP2026',
+        ])->assertSessionHasErrors('codigo');
+
+        $this->assertGuest();
+    }
+
+    public function test_conta_da_coordenacao_entra_com_o_codigo_da_coordenacao(): void
+    {
+        $coordenadora = User::factory()->for($this->escola)->coordenador()->create(['nome' => 'Ana', 'sobrenome' => 'Coordenadora']);
+
+        $this->post('/entrar', [
+            'nome' => 'Ana',
+            'sobrenome' => 'Coordenadora',
+            'codigo' => 'COORD2026',
+        ])->assertRedirect(route('coordenacao.tarefas.index'));
+
+        $this->assertAuthenticatedAs($coordenadora);
+    }
+
+    public function test_professor_que_entra_com_o_codigo_da_coordenacao_vira_coordenador(): void
+    {
+        $usuario = User::factory()->for($this->escola)->create(['nome' => 'Bruno', 'sobrenome' => 'Lima']);
+
+        $this->post('/entrar', [
+            'nome' => 'Bruno',
+            'sobrenome' => 'Lima',
+            'codigo' => 'COORD2026',
+        ])->assertRedirect(route('coordenacao.tarefas.index'));
+
+        $this->assertTrue($usuario->fresh()->ehCoordenador());
     }
 
     public function test_sair_da_conta(): void

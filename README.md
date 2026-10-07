@@ -3,20 +3,27 @@
 Site para os professores acompanharem a pauta do bimestre e marcarem o que já fizeram.
 Feito em Laravel (PHP) com banco de dados MySQL.
 
-- A pessoa cria a conta só com **nome, sobrenome e o código da escola** (entregue pessoalmente pela coordenação).
+- A pessoa cria a conta só com **nome, sobrenome e o código da escola** (entregue pessoalmente).
+- Há dois códigos: o **dos professores** e o **da coordenação**. Só quem tem o código da coordenação edita a pauta.
 - Depois de entrar, o aparelho fica lembrado: não é preciso entrar de novo.
 - Cada tarefa pode ser marcada como feita. A cor da linha mostra o status: feito, vence em até 2 dias, vencido ou a fazer.
 - Visual segue o guia de estilo (contorno preto, sombra sólida, letras grandes, alto contraste).
 
-## O que já está pronto (parte 1)
+## O que já está pronto
+
+**Parte 1**
 
 - Estrutura Laravel, banco de dados e telas.
 - Criar conta e entrar com nome, sobrenome e código da escola.
 - Pauta do 4º bimestre (outubro a dezembro) já cadastrada, com filtro por mês e barra de progresso.
 - Marcar e desmarcar tarefas sem recarregar a página, com aviso de sucesso e de erro.
-- Comando para definir quem é coordenador(a).
 
-Próximas partes: área da coordenação (criar e editar tarefas, ver quem já marcou o quê, trocar o código da escola).
+**Parte 2: coordenação**
+
+- Tela **Editar pauta**: acrescentar, editar e excluir itens (com pop-up de confirmação), e ver quantos professores já fizeram cada item.
+- Tela **Códigos de acesso**: ver e trocar o código dos professores e o da coordenação.
+- Conta da coordenação só entra com o código da coordenação. Quem entra com esse código passa a ser da coordenação.
+- Comandos `pauta:codigos` (mostra os códigos) e `pauta:coordenador` (cria ou promove uma conta).
 
 ## Requisitos
 
@@ -47,7 +54,8 @@ DB_USERNAME=root
 DB_PASSWORD=sua_senha
 
 ESCOLA_NOME="Nome da escola"
-ESCOLA_CODIGO=ABC123     # o código que você vai passar para os professores
+ESCOLA_CODIGO=ABC123                 # código para os professores
+ESCOLA_CODIGO_COORDENACAO=XYZ98765   # código só da coordenação (não passe para os professores)
 ```
 
 Depois crie as tabelas e a pauta:
@@ -56,14 +64,15 @@ Depois crie as tabelas e a pauta:
 # 3. Criar as tabelas, a escola e as tarefas da pauta
 php artisan migrate --seed
 
-# 4. Definir quem é da coordenação (cria a conta se ainda não existir)
-php artisan pauta:coordenador "Maria" "Souza"
+# 4. Ver os dois códigos de acesso
+php artisan pauta:codigos
 
 # 5. Abrir o site em http://localhost:8000
 php artisan serve
 ```
 
-Se você deixar `ESCOLA_CODIGO` vazio, um código é sorteado e aparece na tela no passo 3.
+Códigos deixados em branco são sorteados e aparecem na tela no passo 3. Para virar coordenação,
+crie a conta (ou entre) no site usando o código da coordenação.
 
 ## Colocar na internet: VPS da Hostinger com CloudPanel
 
@@ -96,8 +105,8 @@ cd appmordomia.com.br
 
 PHP_BIN=php8.4 bash publicar.sh instalar   # instala as dependências, cria o .env e para
 nano .env                                  # preencha (veja abaixo)
-PHP_BIN=php8.4 bash publicar.sh instalar   # cria as tabelas e a pauta
-php8.4 artisan pauta:coordenador "Seu Nome" "Sobrenome"
+PHP_BIN=php8.4 bash publicar.sh instalar   # cria as tabelas e a pauta (e mostra os códigos)
+php8.4 artisan pauta:codigos               # mostra os códigos de novo, quando precisar
 ```
 
 No `.env`, altere as mesmas linhas da seção da hospedagem compartilhada (abaixo), com `DB_HOST=127.0.0.1`
@@ -129,8 +138,7 @@ git clone https://github.com/barcelosanderson/pautacp.git
 cd pautacp
 bash publicar.sh instalar      # instala as dependências, cria o .env e para
 nano .env                      # preencha (veja abaixo) e salve com Ctrl+O, Enter, Ctrl+X
-bash publicar.sh instalar      # cria as tabelas e a pauta
-php artisan pauta:coordenador "Seu Nome" "Sobrenome"
+bash publicar.sh instalar      # cria as tabelas e a pauta (e mostra os códigos)
 
 # Faz o domínio abrir a pasta public do projeto
 cd ..
@@ -153,6 +161,7 @@ DB_PASSWORD="a senha do banco"
 
 ESCOLA_NOME="Nome da escola"
 ESCOLA_CODIGO=ABC123
+ESCOLA_CODIGO_COORDENACAO=XYZ98765
 ```
 
 E acrescente no fim do arquivo: `SESSION_SECURE_COOKIE=true`
@@ -188,6 +197,8 @@ Os testes usam um banco SQLite na memória, então não mexem no seu MySQL.
 | Endereços do site | `routes/web.php` |
 | Criar conta, entrar e sair | `app/Http/Controllers/AcessoController.php` |
 | Tela da pauta e marcar tarefa | `app/Http/Controllers/PautaController.php` |
+| Editar pauta (coordenação) | `app/Http/Controllers/Coordenacao/TarefaController.php` |
+| Códigos de acesso (coordenação) | `app/Http/Controllers/Coordenacao/CodigoController.php` |
 | Regras da pauta (status, resumo, meses) | `app/Services/Pauta.php` |
 | Tabelas do banco | `database/migrations` |
 | Datas e textos da pauta | `database/seeders/PautaSeeder.php` |
@@ -200,9 +211,9 @@ Os testes usam um banco SQLite na memória, então não mexem no seu MySQL.
 
 | Tabela | Para que serve |
 | --- | --- |
-| `escolas` | Nome da escola e o código de acesso |
+| `escolas` | Nome da escola, código dos professores e código da coordenação |
 | `users` | Pessoas: nome, sobrenome, escola e papel (`professor` ou `coordenador`) |
-| `tarefas` | Itens da pauta: data, prazo, descrição, se repete todo mês |
+| `tarefas` | Itens da pauta: data, prazo, descrição, se repete todo mês, se é só aviso |
 | `tarefa_user` | Quem marcou cada tarefa como feita, e quando |
 
 ## Sobre a segurança do acesso
@@ -211,7 +222,8 @@ Entrar só com nome e código é simples para quem tem pouca familiaridade com t
 mas quem souber o nome de um colega e o código da escola consegue entrar como ele.
 Por isso:
 
+- a coordenação tem um código próprio: com o código dos professores ninguém entra numa conta da coordenação;
 - o site limita o número de tentativas seguidas;
-- é bom trocar o código da escola se ele vazar.
+- se um código vazar, troque na tela **Códigos de acesso**.
 
 Se quiser mais proteção depois, dá para pedir um PIN de 4 números só quando a pessoa entrar em um aparelho novo.

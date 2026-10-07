@@ -57,7 +57,7 @@
                 @error('codigo')
                     <span id="codigo-erro" class="mensagem-erro">{{ $message }}</span>
                 @enderror
-                <span id="codigo-ajuda" class="ajuda">A coordenação entrega o código pessoalmente. Se ainda não tem, peça para a coordenação.</span>
+                <span id="codigo-ajuda" class="ajuda">O código é entregue pessoalmente. Se ainda não tem, fale com o cara.</span>
             </div>
 
             <button type="submit" class="botao botao-principal botao-grande">
@@ -66,6 +66,6 @@
         </form>
     </section>
 
-    <p class="texto-secundario texto-centro">Precisa de ajuda? Fale com a coordenação da escola.</p>
+    <p class="texto-secundario texto-centro">Precisa de ajuda? Fale com o cara.</p>
 </main>
 @endsection

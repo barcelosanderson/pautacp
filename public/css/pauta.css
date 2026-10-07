@@ -570,7 +570,7 @@ a:hover { color: var(--azul-hover); }
 .tarefa-corpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .tarefa-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .tarefa-data { font-size: 19px; font-weight: 700; }
-.tarefa-texto { font-size: 18px; font-weight: 500; line-height: 1.55; }
+.tarefa-texto { margin: 0; font-size: 18px; font-weight: 500; line-height: 1.55; }
 
 .informativo {
   background: var(--amarelo-claro);
@@ -581,6 +581,58 @@ a:hover { color: var(--azul-hover); }
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ---------- Coordenação ---------- */
+
+.acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+
+.formulario-limitado { max-width: 760px; }
+
+.area-texto { min-height: 132px; line-height: 1.5; resize: vertical; }
+
+/* Caixa de seleção com título e ajuda (ex.: "Repete todo mês") */
+.opcao {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.opcao .caixa-visual { margin-top: 2px; }
+.opcao-texto { display: flex; flex-direction: column; gap: 2px; }
+
+/* Linha da tela "Editar pauta": texto à esquerda, Editar e Excluir à direita */
+.linha-edicao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 24px;
+  padding: 18px 20px;
+  background: var(--branco);
+  border: var(--contorno);
+  border-radius: var(--raio-linha);
+  box-shadow: var(--sombra-botao);
+}
+.linha-edicao .tarefa-corpo { flex: 1 1 360px; }
+.linha-edicao-aviso { background: var(--amarelo-claro); }
+.linha-edicao-botoes { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.grade-cards-largos { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+.codigo-destaque {
+  align-self: flex-start;
+  margin: 4px 0;
+  padding: 12px 18px;
+  background: var(--amarelo-claro);
+  border: var(--contorno);
+  border-radius: var(--raio-botao);
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  word-break: break-all;
 }
 
 /* ---------- Aviso rápido (toast) ---------- */
